@@ -1,6 +1,9 @@
+using System;
+using System.Text;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Windows.Speech;
 
 public class PlayerMovement : MonoBehaviour
 {
@@ -9,37 +12,77 @@ public class PlayerMovement : MonoBehaviour
     private Animator anime;
     private SpriteRenderer sprite;
     private BoxCollider2D collider;
-
-    [SerializeField] private LayerMask Ground;
-
-    [SerializeField] private float jumpheight = 15f;
-    [SerializeField] private float movespeed = 18f;
     private float dirX = 0f;
+    private KeywordRecognizer m_Recognizer;
+    private VoiceCommand command;
 
-    private enum MoveState { idle,running,jumping,falling}
+    [SerializeField] 
+    private LayerMask Ground;
 
-    [SerializeField] private AudioSource jumpsound;
+    [SerializeField] 
+    private float jumpheight = 15f;
+
+    [SerializeField] 
+    private float movespeed = 18f;
+    
+    [SerializeField] 
+    private AudioSource jumpsound;
+
+    [SerializeField]
+    private string[] m_Keywords;
+
+    private enum MoveState 
+    { 
+        idle,running,jumping,falling
+    }
+    private enum VoiceCommand
+    { 
+        none, up, down
+    }
 
     private void Start()
     {
         rb = GetComponent<Rigidbody2D>();
         anime = GetComponent<Animator>();
         sprite = GetComponent<SpriteRenderer>();    
-        collider = GetComponent<BoxCollider2D>();   
-    }
+        collider = GetComponent<BoxCollider2D>(); 
 
+        m_Recognizer = new KeywordRecognizer(m_Keywords);
+        m_Recognizer.OnPhraseRecognized += OnPhraseRecognized;
+        m_Recognizer.Start();  
+    }
+    
     // Update is called once per frame
     private void Update()
     {
         dirX = Input.GetAxisRaw("Horizontal");
         rb.velocity = new Vector2(dirX * movespeed, rb.velocity.y);
 
-        if (Input.GetButtonDown("Jump") && Groundcheck())
+        if ((Input.GetButtonDown("Jump") || command == VoiceCommand.up) && Groundcheck())
         {
             jumpsound.Play();
             rb.velocity = new Vector2(rb.velocity.x, jumpheight);
+            command = VoiceCommand.none;
         }
         Updateanime();
+    }
+
+    private void OnPhraseRecognized(PhraseRecognizedEventArgs args)
+    {
+        StringBuilder builder = new StringBuilder();
+        builder.AppendFormat("{0} ({1}){2}", args.text, args.confidence, Environment.NewLine);
+        builder.AppendFormat("\tTimestamp: {0}{1}", args.phraseStartTime, Environment.NewLine);
+        builder.AppendFormat("\tDuration: {0} seconds{1}", args.phraseDuration.TotalSeconds, Environment.NewLine);
+        Debug.Log(builder.ToString());
+
+        if (args.text == "jump" || args.text == "up") 
+        {
+            command = VoiceCommand.up;
+        } 
+        else if (args.text == "duck" || args.text == "down") 
+        {
+            command = VoiceCommand.down;
+        }
     }
 
     private void Updateanime()
