@@ -15,16 +15,24 @@ public class PlayerMovement : MonoBehaviour
     private float dirX = 0f;
     private KeywordRecognizer m_Recognizer;
     private VoiceCommand command;
+    private bool isJumping = false;
+
+    float smoothTime = .1f;
+    float velocitySmoothing;
+    
 
     [SerializeField] 
     private LayerMask Ground;
 
     [SerializeField] 
-    private float jumpheight = 15f;
+    private float jumpheight = 14f;
 
     [SerializeField] 
-    private float movespeed = 18f;
-    
+    private float movespeed = 14f;
+
+    [SerializeField]
+    float jumpBoost = 1.2f;
+
     [SerializeField] 
     private AudioSource jumpsound;
 
@@ -47,23 +55,45 @@ public class PlayerMovement : MonoBehaviour
         sprite = GetComponent<SpriteRenderer>();    
         collider = GetComponent<BoxCollider2D>(); 
 
-        m_Recognizer = new KeywordRecognizer(m_Keywords);
+        m_Recognizer = new KeywordRecognizer(m_Keywords, ConfidenceLevel.Low);
         m_Recognizer.OnPhraseRecognized += OnPhraseRecognized;
         m_Recognizer.Start();  
     }
-    
+
+    private void OnDestroy() {
+        m_Recognizer.Stop();
+    }
+
     // Update is called once per frame
     private void Update()
     {
         dirX = Input.GetAxisRaw("Horizontal");
-        rb.velocity = new Vector2(dirX * movespeed, rb.velocity.y);
-
-        if ((Input.GetButtonDown("Jump") || command == VoiceCommand.up) && Groundcheck())
+        Vector2 velocity = new Vector2(
+            Mathf.SmoothDamp(rb.velocity.x , dirX * movespeed, ref velocitySmoothing, smoothTime), 
+            rb.velocity.y);
+        rb.velocity = velocity;
+        if (Groundcheck()) {
+            isJumping = false;
+        }
+        if ((Input.GetButtonDown("Jump") || // UP
+            Input.GetAxisRaw("Vertical") > 0) && 
+            Groundcheck())
         {
             jumpsound.Play();
             rb.velocity = new Vector2(rb.velocity.x, jumpheight);
-            command = VoiceCommand.none;
+            isJumping = true;
         }
+        if (command == VoiceCommand.up && // VOICE UP
+            isJumping) {
+            jumpsound.Play();
+            rb.velocity = new Vector2(rb.velocity.x, jumpBoost * jumpheight);
+        }
+        if (Input.GetAxisRaw("Vertical") < 0 ||
+            command == VoiceCommand.down) { // DOWN + VOICE DOWN
+            rb.velocity = new Vector2(rb.velocity.x, -jumpheight);
+            
+        }
+        command = VoiceCommand.none;
         Updateanime();
     }
 
@@ -79,7 +109,7 @@ public class PlayerMovement : MonoBehaviour
         {
             command = VoiceCommand.up;
         } 
-        else if (args.text == "duck" || args.text == "down") 
+        else if (args.text == "slam" || args.text == "down") 
         {
             command = VoiceCommand.down;
         }

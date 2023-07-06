@@ -23,15 +23,17 @@ public class PlayerLife : MonoBehaviour
         }
     }
 
-    private void Death()
+    public void Death()
     {
         deathsound.Play();
         anime.SetTrigger("death");
         body.bodyType = RigidbodyType2D.Static;
     }
 
-    private void Reset()
+    public void Reset()
     {
         SceneManager.LoadScene(SceneManager.GetActiveScene().name);
     }
+
+    
 }

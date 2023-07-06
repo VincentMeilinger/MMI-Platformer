@@ -1,9 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class Goal : MonoBehaviour
 {
+    [SerializeField]
+    private int nextLevel = 1;
+
     private AudioSource goalsound;
     private bool won;
     private void Start()
@@ -17,12 +21,12 @@ public class Goal : MonoBehaviour
         {
             goalsound.Play();
             won = true;
+            NextLevel();
         }
     }
 
-    private void CompleteLevel()
-    {
-
+    public void NextLevel() {
+        SceneManager.LoadScene("Level_" + nextLevel);
     }
-    
 }
+
