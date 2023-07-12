@@ -16,7 +16,8 @@ public class PlayerMovement : MonoBehaviour
     private KeywordRecognizer m_Recognizer;
     private VoiceCommand command;
     private bool isJumping = false;
-
+    private bool canDoubleJump = false;
+    private bool isDoubleJumping = false;
     float smoothTime = .1f;
     float velocitySmoothing;
     
@@ -74,6 +75,10 @@ public class PlayerMovement : MonoBehaviour
         rb.velocity = velocity;
         if (Groundcheck()) {
             isJumping = false;
+            canDoubleJump = false;
+            isDoubleJumping = false;
+        } else {
+            canDoubleJump = true;
         }
         if ((Input.GetButtonDown("Jump") || // UP
             Input.GetAxisRaw("Vertical") > 0) && 
@@ -83,15 +88,20 @@ public class PlayerMovement : MonoBehaviour
             rb.velocity = new Vector2(rb.velocity.x, jumpheight);
             isJumping = true;
         }
-        if (command == VoiceCommand.up && // VOICE UP
-            isJumping) {
+        if ((command == VoiceCommand.up || // VOICE UP
+            Input.GetButtonDown("Jump") ||
+            Input.GetAxisRaw("Vertical") > 0) &&
+            canDoubleJump && !isDoubleJumping) {
             jumpsound.Play();
             rb.velocity = new Vector2(rb.velocity.x, jumpBoost * jumpheight);
+            isDoubleJumping = true;
         }
         if (Input.GetAxisRaw("Vertical") < 0 ||
             command == VoiceCommand.down) { // DOWN + VOICE DOWN
             rb.velocity = new Vector2(rb.velocity.x, -jumpheight);
-            
+            isJumping = false;
+            canDoubleJump = false;
+            isDoubleJumping = false;
         }
         command = VoiceCommand.none;
         Updateanime();
